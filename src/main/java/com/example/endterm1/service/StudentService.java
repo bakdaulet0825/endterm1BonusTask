@@ -4,6 +4,7 @@ import com.example.endterm1.model.Student;
 import com.example.endterm1.repository.StudentRepository;
 import org.springframework.stereotype.Service;
 import java.util.List;
+import com.example.endterm1.cache.StudentCache;
 
 @Service
 public class StudentService {
@@ -14,7 +15,17 @@ public class StudentService {
     }
 
     public List<Student> getAllStudents() {
-        return studentRepository.findAll();
+
+        StudentCache cache = StudentCache.getInstance();
+
+        if (cache.contains("allStudents")) {
+            return cache.get("allStudents");
+        }
+
+        List<Student> students = studentRepository.findAll();
+        cache.put("allStudents", students);
+
+        return students;
     }
 
     public Student getStudentById(int id) {
@@ -22,18 +33,26 @@ public class StudentService {
     }
 
     public Student createStudent(Student student) {
-        return studentRepository.save(student);
+        Student saved = studentRepository.save(student);
+        StudentCache.getInstance().clear();
+        return saved;
     }
 
     public Student updateStudent(int id, Student updatedStudent) {
         return studentRepository.findById(id).map(student -> {
             student.setName(updatedStudent.getName());
             student.setEmail(updatedStudent.getEmail());
-            return studentRepository.save(student);
+
+            Student saved = studentRepository.save(student);
+
+            StudentCache.getInstance().clear();
+
+            return saved;
         }).orElse(null);
     }
 
     public void deleteStudent(int id) {
         studentRepository.deleteById(id);
+        StudentCache.getInstance().clear();
     }
 }
